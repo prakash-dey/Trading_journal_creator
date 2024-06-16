@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trading Journal</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <form id="myForm" class="flex">
+        <div class="flex">
+          <div class="disp_blc">
+            <label for="csvFile">Please upload the order book </label>
+            <input type="file" id="csvFile" accept=".csv" />
+          </div>
+          <div>
+            <label for="jsonFile">Please upload the master json file</label>
+            <input type="file" id="jsonFile" accept=".json" />
+          </div>
+        </div>
+        <div>
+          <select name="environment" id="environment">
+            <option value="testing" selected>Testing</option>
+            <option value="production">Prdouction</option>
+          </select>
+        </div>
+        <div>
+          <button>Generate</button>
+        </div>
+      </form>
+      <div class="p_n_l_div mg-top"></div>
+      <table class="mg-top">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <script src="./app.js"></script>
+  </body>
+</html>
