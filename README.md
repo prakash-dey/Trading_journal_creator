@@ -8,4 +8,6 @@ This is MVP now, current version includes the following features
 
 Upcoming
 1. Filter based on date
-2. Highlight rows based on search . Eg - Profit greater than 5000 , trades on nifty/bank nifty , trade after 12pm , days with trade more than 10 ,days with loss trade more than profit days 
+2. Highlight rows based on search . Eg - Profit greater than 5000 , trades on nifty/bank nifty , trade after 12pm , days with trade more than 10 ,days with loss trade more than profit days
+
+![Screenshot 2024-06-17 at 1 56 24 AM](https://github.com/prakash-dey/Trading_journal_creator/assets/91982512/a103c7cd-384c-4eee-98f7-ea4c70db4276)
