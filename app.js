@@ -266,4 +266,10 @@ generate_button.addEventListener("click", (e) => {
   }
 });
 
+/************Change environment button color on click */
+const dropdown_btn = document.querySelector("#environment");
+dropdown_btn.addEventListener("change" , ()=>{
+  dropdown_btn.style.backgroundColor = dropdown_btn.value == "testing" ? "red" : "green";
+  
+})
 /***************************** */
