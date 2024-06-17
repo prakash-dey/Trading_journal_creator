@@ -16,9 +16,10 @@ let table_headers_options_arr = [
   "Day P/L",
 ];
 
-(function init(){
+(function init() {
   const dropdown_btn = document.querySelector("#environment");
-  dropdown_btn.style.backgroundColor = dropdown_btn.value == "testing" ? "red" : "green";
+  dropdown_btn.style.backgroundColor =
+    dropdown_btn.value == "testing" ? "red" : "green";
 })();
 /******Convert CSV to JSON ***********/
 function csvToJson(csvString) {
@@ -45,17 +46,18 @@ function csvToJson(csvString) {
 }
 
 /*************File safety function */
-function file_safety_func(master_json,child_json){
+function file_safety_func(master_json, child_json) {
   console.log(master_json);
-  if(!master_json){
+  if (!master_json) {
     // You have not uploaded the master file
-    window.confirm("Do you want to proceed without master file")
+    window.confirm("Do you want to proceed without master file");
   }
 }
 
 /****************Restructure the json file */
 function restructure_json_func(json_data) {
-  let restructured_json = {},helper_obj = {};
+  let restructured_json = {},
+    helper_obj = {};
 
   json_data.forEach((data) => {
     console.log(data);
@@ -85,7 +87,7 @@ function restructure_json_func(json_data) {
           adjusted_buying_avg: 0,
         };
       }
-    date = date.split(" ")[0];
+      date = date.split(" ")[0];
       if (!restructured_json[date]) {
         restructured_json[date] = { trades: [], day_p_l: 0, length: 0 };
       }
@@ -127,12 +129,13 @@ function restructure_json_func(json_data) {
           helper_obj[data["Instrument"]].adjusted_buying_avg *
             obj.realized_quantity;
         obj.profit_or_loss = Number(obj.profit_or_loss.toFixed(2));
-        restructured_json[date].day_p_l = Number(restructured_json[date].day_p_l.toFixed(2)) +  obj.profit_or_loss;
-        
+        restructured_json[date].day_p_l =
+          Number(restructured_json[date].day_p_l.toFixed(2)) +
+          obj.profit_or_loss;
       }
 
       console.log(restructured_json, "restructured_json");
-   
+
       restructured_json[date].trades.push(obj);
       restructured_json[date].length = restructured_json[date].trades.length;
     }
@@ -143,7 +146,10 @@ function restructure_json_func(json_data) {
 /**************Append and download json data ***/
 function append_and_download_json(master_json, child_json) {
   master_json = master_json ?? [];
-  if(!master_json.length && !window.confirm("Do you want to proceed without master file")){
+  if (
+    !master_json.length &&
+    !window.confirm("Do you want to proceed without master file")
+  ) {
     return master_json;
   }
   if (child_json) {
@@ -208,19 +214,18 @@ function generate_journal_rows(master_json_data) {
   }
 }
 
-function show_final_profit_and_loss(json_data){
-    let final_p_n_l = 0;
-    for(const property in json_data){
-        final_p_n_l += json_data[property].day_p_l;
-    }
-    const p_n_l_ele = document.querySelector(".p_n_l_div");
-    p_n_l_ele.textContent = final_p_n_l.toFixed(2);
-    let color = "green";
-    if(final_p_n_l <= 0){
-        color = "red";
-    }
-    p_n_l_ele.style.color = color;
-
+function show_final_profit_and_loss(json_data) {
+  let final_p_n_l = 0;
+  for (const property in json_data) {
+    final_p_n_l += json_data[property].day_p_l;
+  }
+  const p_n_l_ele = document.querySelector(".p_n_l_div");
+  p_n_l_ele.textContent = final_p_n_l.toFixed(2);
+  let color = "green";
+  if (final_p_n_l <= 0) {
+    color = "red";
+  }
+  p_n_l_ele.style.color = color;
 }
 /***********Read the existing database */
 /**
@@ -266,24 +271,25 @@ generate_button.addEventListener("click", (e) => {
   if (!order_book_json && !master_json_data) alert("Please upload files");
   else {
     let json_data = append_and_download_json(master_json_data, order_book_json);
-
     master_json_data = null;
     order_book_json = null;
-    global_master_json_restructured = restructure_json_func(json_data);
-    generate_journal_header();
-    generate_journal_rows(global_master_json_restructured);
-    show_final_profit_and_loss(global_master_json_restructured);
-    console.log(
-      "global_master_json_restructured",
-      global_master_json_restructured
-    );
+    if (json_data.length) {
+      global_master_json_restructured = restructure_json_func(json_data);
+      generate_journal_header();
+      generate_journal_rows(global_master_json_restructured);
+      show_final_profit_and_loss(global_master_json_restructured);
+      console.log(
+        "global_master_json_restructured",
+        global_master_json_restructured
+      );
+    }
   }
 });
 
 /************Change environment button color on click */
 const dropdown_btn = document.querySelector("#environment");
-dropdown_btn.addEventListener("change" , ()=>{
-  dropdown_btn.style.backgroundColor = dropdown_btn.value == "testing" ? "red" : "green";
-  
-})
+dropdown_btn.addEventListener("change", () => {
+  dropdown_btn.style.backgroundColor =
+    dropdown_btn.value == "testing" ? "red" : "green";
+});
 /***************************** */
