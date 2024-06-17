@@ -16,6 +16,10 @@ let table_headers_options_arr = [
   "Day P/L",
 ];
 
+(function init(){
+  const dropdown_btn = document.querySelector("#environment");
+  dropdown_btn.style.backgroundColor = dropdown_btn.value == "testing" ? "red" : "green";
+})();
 /******Convert CSV to JSON ***********/
 function csvToJson(csvString) {
   const rows = csvString.split("\n");
@@ -38,6 +42,15 @@ function csvToJson(csvString) {
     }
   }
   return jsonData;
+}
+
+/*************File safety function */
+function file_safety_func(master_json,child_json){
+  console.log(master_json);
+  if(!master_json){
+    // You have not uploaded the master file
+    window.confirm("Do you want to proceed without master file")
+  }
 }
 
 /****************Restructure the json file */
@@ -130,6 +143,9 @@ function restructure_json_func(json_data) {
 /**************Append and download json data ***/
 function append_and_download_json(master_json, child_json) {
   master_json = master_json ?? [];
+  if(!master_json.length && !window.confirm("Do you want to proceed without master file")){
+    return master_json;
+  }
   if (child_json) {
     master_json = master_json.concat(child_json.reverse());
     let el = document.createElement("a");
@@ -138,9 +154,7 @@ function append_and_download_json(master_json, child_json) {
       encodeURIComponent(JSON.stringify(master_json));
     const environment_type = document.querySelector("#environment").value;
 
-    let file_name = `${environment_type.toUpperCase()}_option_master_json_${new Date()
-      .toLocaleString()
-      .replace(/[/, :]/g, "_")}.json`;
+    let file_name = `${environment_type.toUpperCase()}_option_master_data.json`;
     el.setAttribute("href", "data:" + data);
     el.setAttribute("download", file_name);
     document.body.appendChild(el);
