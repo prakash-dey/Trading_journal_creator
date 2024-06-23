@@ -3,6 +3,7 @@
 let global_master_json_restructured;
 let table_headers_options_arr = [
   "Date",
+  "No of trades",
   "Time",
   "Instrument",
   "Order type",
@@ -12,6 +13,7 @@ let table_headers_options_arr = [
   "Sell Price",
   "Unreal. Quant.",
   "Adj Buy Avg",
+  "Net amount",
   "P/L",
   "Day P/L",
 ];
@@ -60,8 +62,23 @@ function restructure_json_func(json_data) {
     helper_obj = {};
 
   json_data.forEach((data) => {
-    console.log(data);
+    let parse_info_obj = {
+      status: data["Status"] ?? "COMPLETE",
+      time: data["Time"] ?? data["order_execution_time"].replace("T", " "),
+      instrument: data["Instrument"] ?? data["symbol"],
+      order_type: data["Type"] ?? data["trade_type"].toUpperCase(),
+      avg_price: data["Avg. price"] ?? data["price"],
+      quantity: data["Qty."] ?? data["quantity"],
+    };
+    if (parse_info_obj.time.includes("/")) {
+      let parsed_date = parse_info_obj.time.replaceAll("/", "");
+      let date = parsed_date.slice(0, 2);
+      let month = parsed_date.slice(2, 4);
+      let year = parsed_date.slice(4, 8);
+      let time = parsed_date.slice(9);
 
+      parse_info_obj.time = `${year}-${month}-${date} ${time}`;
+    }
     let obj = {
       time: "--",
       instrument: "--",
@@ -72,17 +89,18 @@ function restructure_json_func(json_data) {
       sell_price: "--",
       unrealized_quantity: "--",
       adjusted_buying_avg: "--",
+      outstanding_amt : 0,
       profit_or_loss: "--",
     };
 
-    if (data["Status"] == "COMPLETE") {
-      obj.instrument = data["Instrument"].trim();
-      let date = data["Time"].trim();
+    if (parse_info_obj.status == "COMPLETE") {
+      obj.instrument = parse_info_obj.instrument.trim();
+      let date = parse_info_obj.time.trim();
       obj.time = date.split(" ")[1];
-      obj.order_type = data["Type"].trim();
+      obj.order_type = parse_info_obj.order_type.trim();
 
-      if (!helper_obj[data["Instrument"]]) {
-        helper_obj[data["Instrument"]] = {
+      if (!helper_obj[obj.instrument]) {
+        helper_obj[obj.instrument] = {
           unrealized_quantity: 0,
           adjusted_buying_avg: 0,
         };
@@ -93,55 +111,63 @@ function restructure_json_func(json_data) {
       }
 
       //   console.log(helper_obj, "helper_obj");
-      if (data["Type"] == "BUY") {
-        obj.buy_quantity = data["Qty."]?.trim();
-        obj.buy_quantity = Number(
-          obj.buy_quantity.slice(0, obj.buy_quantity.indexOf("/"))
-        );
-        obj.buy_price = Number(data["Avg. price"]?.trim());
+      if (parse_info_obj.order_type == "BUY") {
+        obj.buy_quantity = parse_info_obj.quantity?.trim();
+        obj.buy_quantity = obj.buy_quantity.includes("/")
+          ? Number(obj.buy_quantity.slice(0, obj.buy_quantity.indexOf("/")))
+          : Number(obj.buy_quantity);
+        obj.buy_price = Number(parse_info_obj.avg_price?.trim());
 
-        helper_obj[data["Instrument"]].adjusted_buying_avg =
-          (helper_obj[data["Instrument"]].adjusted_buying_avg *
-            helper_obj[data["Instrument"]].unrealized_quantity +
+        helper_obj[obj.instrument].adjusted_buying_avg =
+          (helper_obj[obj.instrument].adjusted_buying_avg *
+            helper_obj[obj.instrument].unrealized_quantity +
             obj.buy_quantity * obj.buy_price) /
-          (helper_obj[data["Instrument"]].unrealized_quantity +
-            obj.buy_quantity);
+          (helper_obj[obj.instrument].unrealized_quantity + obj.buy_quantity);
         obj.adjusted_buying_avg = Number(
-          helper_obj[data["Instrument"]].adjusted_buying_avg.toFixed(2)
+          helper_obj[obj.instrument].adjusted_buying_avg.toFixed(2)
         );
 
-        helper_obj[data["Instrument"]].unrealized_quantity += obj.buy_quantity;
+        helper_obj[obj.instrument].unrealized_quantity += obj.buy_quantity;
         obj.unrealized_quantity =
-          helper_obj[data["Instrument"]].unrealized_quantity;
-      } else if (data["Type"] == "SELL") {
-        obj.realized_quantity = data["Qty."]?.trim();
-        obj.realized_quantity = Number(
-          obj.realized_quantity.slice(0, obj.realized_quantity.indexOf("/"))
-        );
-        obj.sell_price = Number(data["Avg. price"]?.trim());
-        helper_obj[data["Instrument"]].unrealized_quantity =
-          helper_obj[data["Instrument"]].unrealized_quantity -
+          helper_obj[obj.instrument].unrealized_quantity;
+      } else if (parse_info_obj.order_type == "SELL") {
+        obj.realized_quantity = parse_info_obj.quantity?.trim();
+        obj.realized_quantity = obj.realized_quantity.includes("/")
+          ? Number(
+              obj.realized_quantity.slice(0, obj.realized_quantity.indexOf("/"))
+            )
+          : Number(obj.realized_quantity);
+
+        obj.sell_price = Number(parse_info_obj.avg_price?.trim());
+        helper_obj[obj.instrument].unrealized_quantity =
+          helper_obj[obj.instrument].unrealized_quantity -
           obj.realized_quantity;
         obj.unrealized_quantity =
-          helper_obj[data["Instrument"]].unrealized_quantity;
+          helper_obj[obj.instrument].unrealized_quantity;
         obj.profit_or_loss =
           obj.realized_quantity * obj.sell_price -
-          helper_obj[data["Instrument"]].adjusted_buying_avg *
+          helper_obj[obj.instrument].adjusted_buying_avg *
             obj.realized_quantity;
         obj.profit_or_loss = Number(obj.profit_or_loss.toFixed(2));
         restructured_json[date].day_p_l =
-          Number(restructured_json[date].day_p_l.toFixed(2)) +
-          obj.profit_or_loss;
+          restructured_json[date].day_p_l + obj.profit_or_loss;
+        restructured_json[date].day_p_l = Number(restructured_json[date].day_p_l.toFixed(2));
       }
-
+      obj.outstanding_amt = Number((helper_obj[obj.instrument].adjusted_buying_avg*obj.unrealized_quantity).toFixed(2));
       console.log(restructured_json, "restructured_json");
 
       restructured_json[date].trades.push(obj);
       restructured_json[date].length = restructured_json[date].trades.length;
     }
   });
+  const entries = Object.entries(restructured_json);
 
-  return restructured_json;
+  // Sort the array based on the keys (dates)
+  entries.sort((a, b) => new Date(b[0]) - new Date(a[0]));
+
+  // Convert sorted array back to object (if needed)
+  const sortedData = Object.fromEntries(entries);
+  return sortedData;
 }
 /**************Append and download json data ***/
 function append_and_download_json(master_json, child_json) {
@@ -153,14 +179,16 @@ function append_and_download_json(master_json, child_json) {
     return master_json;
   }
   if (child_json) {
-    master_json = master_json.concat(child_json.reverse());
+    child_json = child_json[0].trade_id ? child_json : child_json.reverse();
+    master_json = master_json.concat(child_json);
+    
     let el = document.createElement("a");
     var data =
       "text/json;charset=utf-8," +
       encodeURIComponent(JSON.stringify(master_json));
     const environment_type = document.querySelector("#environment").value;
 
-    let file_name = `${environment_type.toUpperCase()}_option_master_data.json`;
+    let file_name = `${environment_type.toUpperCase()}_${master_json[0].Status ? "order_book":"trade_book"}_option_master_data.json`;
     el.setAttribute("href", "data:" + data);
     el.setAttribute("download", file_name);
     document.body.appendChild(el);
@@ -191,6 +219,7 @@ function generate_journal_rows(master_json_data) {
       let tds = ``;
       if (index == 0) {
         tds += `<td rowspan = ${data.length}>${_date}</td>`;
+        tds += `<td rowspan = ${data.length}>${data.length} trades</td>`;
       }
       for (const property in row_obj) {
         tds += `<td class = ${property}>${row_obj[property]}</td>`;
@@ -244,6 +273,7 @@ csv_file_ele.addEventListener("change", function (e) {
   reader.onload = function (e) {
     const data = e.target.result;
     order_book_json = csvToJson(data);
+    console.log("order_book_json", order_book_json);
   };
 });
 
