@@ -201,3 +201,7 @@ button {
 img{
   height: 50px;
 }
+
+thead{
+  position: static;
+}
