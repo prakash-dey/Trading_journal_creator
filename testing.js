@@ -1,7 +1,5 @@
 // Global vars
 let global_master_json_restructured;
-let global_analysis_json;
-
 let table_headers_options_arr = [
   "Date",
   "No of trades",
@@ -16,7 +14,6 @@ let table_headers_options_arr = [
   "Adj Buy Avg",
   "Net amount",
   "P/L",
-  "Tally P/L",
   "Day P/L",
 ];
 
@@ -48,15 +45,16 @@ function csvToJson(csvString) {
 
 /*************File safety function ************/
 function file_safety_func(master_json, child_json) {
-  //   if (!master_json) {
-  //     window.confirm("Do you want to proceed without master file");
-  //   }
+//   console.log(master_json);
+//   if (!master_json) {
+//     window.confirm("Do you want to proceed without master file");
+//   }
 }
 
 /****************Restructure the JSON file ***********/
 function restructure_json_func(json_data) {
   let restructured_json = {},
-    helper_obj = {}; // To keep track of unrealized quantities and adjusted buying averages
+    helper_obj = {};
 
   // Grouping trades by execution time and symbol
   let grouped_data = json_data.reduce((group, trade) => {
@@ -67,6 +65,8 @@ function restructure_json_func(json_data) {
     group[key].push(trade);
     return group;
   }, {});
+
+  console.log("grouped data",grouped_data);
 
   // Process grouped trades
   Object.values(grouped_data).forEach((grouped_trades) => {
@@ -108,7 +108,6 @@ function restructure_json_func(json_data) {
       adjusted_buying_avg: "--",
       outstanding_amt: 0,
       profit_or_loss: "--",
-      tally_pl: 0,
     };
 
     if (parse_info_obj.status == "COMPLETE") {
@@ -116,7 +115,6 @@ function restructure_json_func(json_data) {
       let date = parse_info_obj.time.trim();
       obj.time = date.split(" ")[1];
       obj.order_type = parse_info_obj.order_type.trim();
-      date = date.split(" ")[0];
 
       if (!helper_obj[obj.instrument]) {
         helper_obj[obj.instrument] = {
@@ -124,12 +122,7 @@ function restructure_json_func(json_data) {
           adjusted_buying_avg: 0,
         };
       }
-
-      if (!helper_obj[date]) {
-        helper_obj[date] = {
-          tally_pl: 0,
-        };
-      }
+      date = date.split(" ")[0];
       if (!restructured_json[date]) {
         restructured_json[date] = { trades: [], day_p_l: 0, length: 0 };
       }
@@ -165,10 +158,6 @@ function restructure_json_func(json_data) {
         restructured_json[date].day_p_l = Number(
           restructured_json[date].day_p_l.toFixed(2)
         );
-
-        helper_obj[date].tally_pl += !isNaN(obj.profit_or_loss)
-          ? Number(obj.profit_or_loss)
-          : 0;
       }
       obj.outstanding_amt = Number(
         (
@@ -177,9 +166,6 @@ function restructure_json_func(json_data) {
         ).toFixed(2)
       );
 
-      obj.tally_pl = helper_obj[date]?.tally_pl?.toFixed(2) ?? 0;
-      obj.tally_pl = Number(obj.tally_pl);
-      // restructured_json[date].trades.push(obj);
       restructured_json[date].trades.push(obj);
       restructured_json[date].length = restructured_json[date].trades.length;
     }
@@ -198,31 +184,30 @@ function restructure_json_func(json_data) {
 /**************Append and download JSON data ***********/
 function append_and_download_json(master_json, child_json) {
   master_json = master_json ?? [];
-  // if (
-  //   !master_json.length &&
-  //   !window.confirm("Do you want to proceed without master file")
-  // ) {
-  //   return master_json;
-  // }
+  if (
+    !master_json.length &&
+    !window.confirm("Do you want to proceed without master file")
+  ) {
+    return master_json;
+  }
   if (child_json) {
     child_json = child_json[0].trade_id ? child_json : child_json.reverse();
     master_json = master_json.concat(child_json);
-    // if (window.confirm("Do you want to download the JSON file?")) {
-    //   let el = document.createElement("a");
-    //   var data =
-    //     "text/json;charset=utf-8," +
-    //     encodeURIComponent(JSON.stringify(master_json));
-    //   const environment_type = document.querySelector("#environment").value;
 
-    //   let file_name = `${environment_type.toUpperCase()}_${
-    //     master_json[0].Status ? "order_book" : "trade_book"
-    //   }_option_master_data.json`;
-    //   el.setAttribute("href", "data:" + data);
-    //   el.setAttribute("download", file_name);
-    //   document.body.appendChild(el);
-    //   el.click();
-    //   el.remove();
-    // }
+        // let el = document.createElement("a");
+        // var data =
+        //   "text/json;charset=utf-8," +
+        //   encodeURIComponent(JSON.stringify(master_json));
+        // const environment_type = document.querySelector("#environment").value;
+
+        // let file_name = `${environment_type.toUpperCase()}_${
+        //   master_json[0].Status ? "order_book" : "trade_book"
+        // }_option_master_data.json`;
+        // el.setAttribute("href", "data:" + data);
+        // el.setAttribute("download", file_name);
+        // document.body.appendChild(el);
+        // el.click();
+        // el.remove();
   }
 
   return master_json;
@@ -231,16 +216,18 @@ function append_and_download_json(master_json, child_json) {
 /**************Table and profit/loss display ***********/
 
 /***********Generate header**************/
-function generate_journal_header(table_headers_options_arr) {
-  let table_header_ele = document.querySelector("thead");
-  let table_header_th = `<tr>`;
-  // Add your existing headers + new column "Tally P/L"
-  table_headers_options_arr.forEach((option) => {
-    table_header_th += `<th scope="col">${option}</th>`;
-  });
-  // table_header_th += `<th scope="col">Day P/L</th>`; // New column for tallying P/L
-  table_header_ele.innerHTML = table_header_th;
-}
+function generate_journal_header() {
+    let table_header_ele = document.querySelector("thead");
+    let table_header_th = "";
+  
+    // Add your existing headers + new column "Tally P/L"
+    table_headers_options_arr.forEach((option) => {
+      table_header_th += `<th scope="col">${option}</th>`;
+    });
+    table_header_th += `<th scope="col">Tally P/L</th>`; // New column for tallying P/L
+    table_header_ele.innerHTML = table_header_th;
+  }
+  
 
 /**********Generate body rows with tally P/L */
 function generate_journal_rows(master_json_data) {
@@ -266,14 +253,11 @@ function generate_journal_rows(master_json_data) {
       }
 
       // Calculate and display the running tally of P/L
-      // tally_pl += !isNaN(row_obj.profit_or_loss) ? Number(row_obj.profit_or_loss) : 0;
-
-      // tds += `<td>${tally_pl.toFixed(2)}</td>`; // Display the cumulative P/L
+      tally_pl += row_obj.profit_or_loss != "--" ? Number(row_obj.profit_or_loss) : 0;
+      tds += `<td>${tally_pl.toFixed(2)}</td>`; // Display the cumulative P/L
 
       if (index === 0) {
-        tds += `<td rowspan=${data.length} class=${
-          data.day_p_l > 0 ? "profit" : "loss"
-        }>${data.day_p_l}</td>`;
+        tds += `<td rowspan=${data.length}>${data.day_p_l}</td>`;
       }
 
       tbody_tr.innerHTML = tds;
@@ -302,156 +286,6 @@ function show_final_profit_and_loss(json_data) {
   }
   p_n_l_ele.style.color = color;
 }
-
-/*********** Calculate ratios for analysis */
-function calculate_ratios(json_data) {
-  let intraday_data = {};
-
-  Object.entries(json_data).forEach(([date, dayData]) => {
-    dayData.trades.forEach((trade) => {
-      if (trade.order_type === "SELL" && trade.realized_quantity > 0) {
-        if (!intraday_data[date]) {
-          intraday_data[date] = {
-            max_profit: 0,
-            max_loss: 0,
-            total_profitable_trades: 0,
-            total_losing_trades: 0,
-            winning_rate: 0,
-            average_profit: 0,
-            average_loss: 0,
-            total_profit: 0,
-            total_loss: 0,
-          };
-        }
-        if (trade.profit_or_loss > 0) {
-          intraday_data[date].total_profit += trade.profit_or_loss;
-          intraday_data[date].total_profitable_trades += 1;
-          intraday_data[date].max_profit = Math.max(
-            intraday_data[date].max_profit,
-            trade.profit_or_loss
-          );
-        } else if (trade.profit_or_loss < 0) {
-          intraday_data[date].total_loss += trade.profit_or_loss;
-          intraday_data[date].total_losing_trades += 1;
-          intraday_data[date].max_loss = Math.min(
-            intraday_data[date].max_loss,
-            trade.profit_or_loss
-          );
-        }
-      }
-    });
-    Object.assign(intraday_data[date], {
-      day_p_l: dayData.day_p_l,
-      total_trade:
-        intraday_data[date].total_profitable_trades +
-        intraday_data[date].total_losing_trades,
-      winning_rate: Number(
-              (
-                (intraday_data[date].total_profitable_trades /
-                  (intraday_data[date].total_profitable_trades +
-        intraday_data[date].total_losing_trades)) *
-                100
-              )
-            )
-          ,
-      average_profit:
-        intraday_data[date].total_profitable_trades > 0
-          ? Number(
-              (
-                intraday_data[date].total_profit /
-                intraday_data[date].total_profitable_trades
-              ).toFixed(2)
-            )
-          : 0,
-      average_loss:
-        intraday_data[date].total_losing_trades > 0
-          ? Number(
-              (
-                intraday_data[date].total_loss /
-                intraday_data[date].total_losing_trades
-              ).toFixed(2)
-            )
-          : 0,
-    });
-  });
-  return intraday_data;
-}
-
-function generate_analysis_table(ratios) {
-  // const formattedStr = str
-  // .split('_')                           // Split by underscores
-  // .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize each word
-  // .join(' ');
-  let table_headers = Object.keys(ratios[Object.keys(ratios)[0]]);
-  table_headers.unshift("Date");
-  generate_journal_header(table_headers);
-
-  let tbody = document.querySelector("tbody");
-  tbody.innerHTML = ``;
-
-  Object.entries(ratios).forEach(([date, data]) => {
-    let tbody_tr = document.createElement("tr");
-    let tds = ``;
-    tds += `<td>${date}</td>`;
-    Object.values(data).forEach((value) => {
-      tds += `<td>${value}</td>`;
-    });
-    tbody_tr.innerHTML = tds;
-    tbody_tr.setAttribute("class", data.day_p_l >= 0 ? "profit" : "loss");
-    tbody.appendChild(tbody_tr);
-  });
-}
-/*****Generate the table and dowload the append master json */
-function calculate_required_data(json_data) {
-  let json_restructured = restructure_json_func(json_data);
-  let analysis_json = calculate_ratios(json_restructured);
-  console.log("restructured json", json_restructured);
-  console.log("analysis_json", analysis_json);
-  let winning_rate_overall = 0;
-  let winning_rate_daily = 0;
-  let total_losing_trades_daily = 0;
-  let total_profitable_trades_daily = 0;
-  let total_losing_trades_overall = 0;
-  let total_profitable_trades_overall = 0;
-
-  let first_trade_of_day_trades = {};
-
-  Object.values(analysis_json).forEach((day) => {
-    total_losing_trades_daily += day.total_losing_trades;
-    total_profitable_trades_daily += day.total_profitable_trades;
-    if(day.day_p_l >0){
-      total_profitable_trades_overall += day.total_profitable_trades;
-    } else if(day.day_p_l <0){
-      total_losing_trades_overall += day.total_losing_trades;
-    }
-
-  });
-  winning_rate_overall = Number(
-    (
-      (total_profitable_trades_overall /
-        (total_profitable_trades_overall + total_losing_trades_overall)) *
-      100
-    ).toFixed(2));
-
-  winning_rate_daily = Number(
-    (
-      (total_profitable_trades_daily /
-        (total_profitable_trades_daily + total_losing_trades_daily)) *
-      100
-    ).toFixed(2));
-    const extra_info_obj = { winning_rate_overall, winning_rate_daily, total_losing_trades_daily, total_profitable_trades_daily, total_losing_trades_overall, total_profitable_trades_overall };
-  console.log(extra_info_obj);
-  // First sell of the day
-
- 
-  return { json_restructured, analysis_json, winning_rate_overall, winning_rate_daily};
-}
-
-function generate_jouranl(json_data) {
-  generate_journal_header(table_headers_options_arr);
-  generate_journal_rows(json_data);
-  show_final_profit_and_loss(json_data);
-}
 /***********Read the existing database */
 /**
  * Note : For now I will be manually uploading the JSON database and later I will automate the task
@@ -469,6 +303,7 @@ csv_file_ele.addEventListener("change", function (e) {
   reader.onload = function (e) {
     const data = e.target.result;
     order_book_json = csvToJson(data);
+    console.log("order_book_json", order_book_json);
   };
 });
 
@@ -488,8 +323,7 @@ json_file_ele.addEventListener("change", function (e) {
   };
 });
 
-/***********Generate the reoprt */
-
+/*****Generate the table and dowload the append master json */
 const generate_button = document.querySelector("button");
 
 generate_button.addEventListener("click", (e) => {
@@ -497,44 +331,18 @@ generate_button.addEventListener("click", (e) => {
   if (!order_book_json && !master_json_data) alert("Please upload files");
   else {
     let json_data = append_and_download_json(master_json_data, order_book_json);
-    console.log("appended json data", json_data);
     master_json_data = null;
     order_book_json = null;
     if (json_data.length) {
-      const { json_restructured, analysis_json } =
-        calculate_required_data(json_data);
-      global_master_json_restructured = json_restructured;
-      global_analysis_json = analysis_json;
-      const operation_type_div = document.querySelector(".operation_type");
-      operation_type_div.classList.remove("hide");
-      generate_jouranl(global_master_json_restructured);
+      global_master_json_restructured = restructure_json_func(json_data);
+      generate_journal_header();
+      generate_journal_rows(global_master_json_restructured);
+      show_final_profit_and_loss(global_master_json_restructured);
+      console.log(
+        "global_master_json_restructured",
+        global_master_json_restructured
+      );
     }
-  }
-});
-
-/**********Generate profit and loss table on click */
-const pnl_btn = document.querySelector("#pnl");
-pnl_btn.addEventListener("click", (e) => {
-  e.preventDefault();
-  const allBtns = document.querySelectorAll(".operation_type button");
-  allBtns.forEach((btn) => btn.classList.remove("border-bottom"));
-  pnl_btn.classList.add("border-bottom");
-  
-  if (global_master_json_restructured) {
-    generate_jouranl(global_master_json_restructured);
-  }
-});
-/**********Generate analysis table on click */
-
-const analytics_btn = document.querySelector("#analytics");
-
-analytics_btn.addEventListener("click", (e) => {
-  e.preventDefault();
-  if (global_analysis_json) {
-    const allBtns = document.querySelectorAll(".operation_type button");
-    allBtns.forEach((btn) => btn.classList.remove("border-bottom"));
-    analytics_btn.classList.add("border-bottom");
-    generate_analysis_table(global_analysis_json);
   }
 });
 

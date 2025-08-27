@@ -1,9 +1,10 @@
+<!-- Index.html file -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"> 
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trading Journal : Order book</title>
+    <title>Trading Journal : Trade book</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -21,8 +22,8 @@
         </div>
         <div>
           <select name="environment" id="environment">
-            <option value="testing" >Testing</option>
-            <option value="production" selected>Prdouction</option>
+            <option value="testing" selected>Testing</option>
+            <option value="production" >Prdouction</option>
           </select>
         </div>
         <div>
@@ -30,6 +31,10 @@
         </div>
       </form>
       <div class="p_n_l_div mg-top"></div>
+      <div class="operation_type hide">
+        <button id="pnl" class="border-bottom">Profit and loss</button>
+        <button id="analytics">Analytics</button>
+      </div>
       <table class="mg-top">
         <thead></thead>
         <tbody></tbody>
